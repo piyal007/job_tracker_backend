@@ -115,6 +115,46 @@ app.delete('/api/jobs/:id', async (req, res) => {
     }
 });
 
+// ===== JOB PORTALS ENDPOINTS =====
+
+// Get all portals
+app.get('/api/portals', async (req, res) => {
+    try {
+        const database = client.db('jobTracker');
+        const portals = database.collection('portals');
+        const result = await portals.find({}).toArray();
+        res.json(result);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// Bulk save/sync all portals
+app.post('/api/portals/sync', async (req, res) => {
+    try {
+        const database = client.db('jobTracker');
+        const portals = database.collection('portals');
+        const portalsToSync = req.body;
+        
+        const operations = portalsToSync.map(portal => ({
+            updateOne: {
+                filter: { id: portal.id },
+                update: { $set: portal },
+                upsert: true
+            }
+        }));
+        
+        const result = await portals.bulkWrite(operations);
+        res.json({ 
+            success: true, 
+            message: `Synced ${result.upsertedCount + result.modifiedCount} portals`,
+            result 
+        });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
 app.listen(port, () => {
     console.log(`🚀 Server running on port ${port}`);
 });
